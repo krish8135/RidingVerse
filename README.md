@@ -1,11 +1,11 @@
 # RidingVerse 🏍️
 
-[![Android CI](https://github.com/YOUR_GITHUB_USERNAME/ridingverse/actions/workflows/android.yml/badge.svg)](https://github.com/YOUR_GITHUB_USERNAME/ridingverse/actions/workflows/android.yml)
+[![Android CI](https://github.com/krish8135/ridingverse/actions/workflows/android.yml/badge.svg)](https://github.com/krish8135/ridingverse/actions/workflows/android.yml)
 
 Real-time motorcycle group telemetry, navigation & safety — native Android
 (Kotlin + Jetpack Compose).
 
-> Replace `YOUR_GITHUB_USERNAME/ridingverse` in the badge URLs above with your
+> Replace `krish8135/ridingverse` in the badge URLs above with your
 > actual GitHub repo path after pushing.
 
 ## What works end-to-end today
