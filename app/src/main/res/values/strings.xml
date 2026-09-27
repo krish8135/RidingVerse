@@ -1,4 +1,19 @@
-<?xml version="1.0" encoding="utf-8"?>
-<resources>
-    <string name="app_name">RidingVerse</string>
-</resources>
+# RidingVerse
+
+RidingVerse is a Kotlin + Jetpack Compose Android app concept for a motorcycle group telemetry, navigation, and safety ecosystem.
+
+## Included
+
+- Moto-inspired dark cockpit dashboard
+- Map route visualization with OpenStreetMap/Leaflet
+- Squadron room overview
+- Safety monitoring panel
+- Android project skeleton with Jetpack Compose
+
+## Run
+
+Open the project in Android Studio and sync Gradle. Then run the `app` configuration on an emulator or physical device.
+
+## Notes
+
+This project is intentionally structured as a production-ready app foundation. The map uses a lightweight Leaflet-based WebView to keep the app compatible without requiring a Google Maps API key.

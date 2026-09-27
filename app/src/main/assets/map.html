@@ -1,0 +1,72 @@
+package com.ridingverse.app.ui.screens
+
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import com.ridingverse.app.ui.theme.RidingVerseAccent
+import com.ridingverse.app.ui.theme.RidingVerseAmber
+import com.ridingverse.app.ui.theme.RidingVerseBackground
+import com.ridingverse.app.ui.theme.RidingVerseCard
+import com.ridingverse.app.ui.theme.RidingVerseRed
+import com.ridingverse.app.ui.theme.RidingVerseText
+
+@Composable
+fun SafetyScreen() {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(RidingVerseBackground)
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(18.dp)
+    ) {
+        Text("Safety Matrix", color = RidingVerseText, fontSize = 24.sp)
+
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(containerColor = RidingVerseCard),
+            shape = RoundedCornerShape(20.dp)
+        ) {
+            Column(modifier = Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("Impact Monitor", color = RidingVerseText, fontSize = 18.sp)
+                Text("3.8G threshold detected: 0", color = RidingVerseText)
+                Text("Gyro tumble: 1.2 rad/s", color = RidingVerseText)
+                Text("Emergency relay: Awaiting rider confirmation", color = RidingVerseAmber)
+            }
+        }
+
+        Button(
+            onClick = { },
+            modifier = Modifier.fillMaxWidth(),
+            colors = ButtonDefaults.buttonColors(containerColor = RidingVerseRed, contentColor = Color.White),
+            shape = RoundedCornerShape(18.dp)
+        ) {
+            Text("Manual SOS")
+        }
+
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(containerColor = RidingVerseCard),
+            shape = RoundedCornerShape(20.dp)
+        ) {
+            Column(modifier = Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("Auto-dispatch", color = RidingVerseText, fontSize = 18.sp)
+                Text("Dispatch to convoy • Emergency SMS • Contact list", color = RidingVerseText)
+                Text("Connected: 4 riders in range", color = RidingVerseAccent)
+            }
+        }
+    }
+}

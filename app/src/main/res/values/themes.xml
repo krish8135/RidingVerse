@@ -1,8 +1,3 @@
-<?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <style name="Theme.RidingVerse" parent="android:Theme.Material.NoActionBar">
-        <item name="android:windowBackground">@color/void_black</item>
-        <item name="android:statusBarColor">@color/void_black</item>
-        <item name="android:navigationBarColor">@color/void_black</item>
-    </style>
+    <string name="app_name">RidingVerse</string>
 </resources>

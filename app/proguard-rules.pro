@@ -1,1 +1,2 @@
-# Keep Room / OkHttp / Compose defaults; no custom rules needed yet.
+# Proguard rules for the app.
+# Add project specific ProGuard rules here.
