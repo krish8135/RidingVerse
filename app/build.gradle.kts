@@ -1,8 +1,6 @@
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
-    id("org.jetbrains.kotlin.plugin.serialization")
-    id("com.google.devtools.ksp")
 }
 
 android {
@@ -73,16 +71,9 @@ dependencies {
     // Preferences DataStore for settings (contacts, relay URL, rider identity)
     implementation("androidx.datastore:datastore-preferences:1.1.1")
 
-    // Room (SQLite) with KSP
-    val roomVersion = "2.6.1"
-    implementation("androidx.room:room-runtime:$roomVersion")
-    implementation("androidx.room:room-ktx:$roomVersion")
-    ksp("androidx.room:room-compiler:$roomVersion")
-
-    // Networking / JSON / coroutines
-    implementation("com.squareup.okhttp3:okhttp:4.12.0")
+    // Kotlin stdlib + coroutines
+    implementation("org.jetbrains.kotlin:kotlin-stdlib:1.9.22")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
-    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.2")
 
     // Location
     implementation("com.google.android.gms:play-services-location:21.1.0")

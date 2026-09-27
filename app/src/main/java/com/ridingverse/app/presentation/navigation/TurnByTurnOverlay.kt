@@ -13,8 +13,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
-import androidx.compose.material.icons.automirrored.filled.TurnLeft
-import androidx.compose.material.icons.automirrored.filled.TurnRight
+import androidx.compose.material.icons.filled.TurnLeft
+import androidx.compose.material.icons.filled.TurnRight
 import androidx.compose.material.icons.filled.ArrowUpward
 import androidx.compose.material.icons.filled.Flag
 import androidx.compose.material.icons.filled.Refresh
@@ -40,8 +40,8 @@ private fun ManeuverIcon.toImageVector(): ImageVector = when (this) {
     ManeuverIcon.STRAIGHT -> Icons.Filled.ArrowUpward
     ManeuverIcon.SLIGHT_LEFT -> Icons.Filled.TurnSlightLeft
     ManeuverIcon.SLIGHT_RIGHT -> Icons.Filled.TurnSlightRight
-    ManeuverIcon.LEFT -> Icons.AutoMirrored.Filled.TurnLeft
-    ManeuverIcon.RIGHT -> Icons.AutoMirrored.Filled.TurnRight
+    ManeuverIcon.LEFT -> Icons.Filled.TurnLeft
+    ManeuverIcon.RIGHT -> Icons.Filled.TurnRight
     ManeuverIcon.SHARP_LEFT -> Icons.AutoMirrored.Filled.ArrowBack
     ManeuverIcon.SHARP_RIGHT -> Icons.AutoMirrored.Filled.ArrowForward
     ManeuverIcon.UTURN -> Icons.Filled.UTurnLeft

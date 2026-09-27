@@ -147,11 +147,10 @@ private fun TachometerRibbon(rpm: Int) {
     val lit = ((rpm / 12_500f) * TACHO_SEGMENTS).toInt().coerceIn(0, TACHO_SEGMENTS)
     val redline = rpm >= REDLINE_RPM
     val flash = if (redline) {
-        rememberInfiniteTransition(label = "redline").animateFloat(
+        rememberInfiniteTransition().animateFloat(
             initialValue = 1f,
             targetValue = 0.25f,
-            animationSpec = infiniteRepeatable(tween(180), RepeatMode.Reverse),
-            label = "flash"
+            animationSpec = infiniteRepeatable(tween(180), RepeatMode.Reverse)
         ).value
     } else 1f
 

@@ -198,8 +198,8 @@ class CockpitViewModel(private val settings: AppSettings) : ViewModel() {
             RideMode.TOURING -> 0.85f
             RideMode.RAIN -> 0.6f
         }
-        val speed = (95f + 55f * sin(simTimeSec * 0.25) * modeCap
-            + 18f * sin(simTimeSec * 0.9)).coerceIn(0f, 165f)
+        val speed = (95f + 55f * sin(simTimeSec * 0.25).toFloat() * modeCap
+            + 18f * sin(simTimeSec * 0.9).toFloat()).coerceIn(0f, 165f)
 
         // Gear from speed bands; rpm climbs inside each gear.
         val gear = when {

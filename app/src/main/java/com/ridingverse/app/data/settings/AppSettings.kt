@@ -10,13 +10,24 @@ import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
-import kotlinx.serialization.Serializable
-import kotlinx.serialization.encodeToString
-import kotlinx.serialization.json.Json
+import org.json.JSONArray
+import org.json.JSONObject
 
 /** A single emergency contact: name + phone number for SMS SOS dispatch. */
-@Serializable
-data class EmergencyContact(val name: String, val phone: String)
+data class EmergencyContact(val name: String, val phone: String) {
+    fun toJson(): JSONObject = JSONObject().apply {
+        put("name", name)
+        put("phone", phone)
+    }
+
+    companion object {
+        fun fromJson(o: JSONObject): EmergencyContact =
+            EmergencyContact(
+                name = o.optString("name"),
+                phone = o.optString("phone")
+            )
+    }
+}
 
 private val Context.settingsDataStore by preferencesDataStore(name = "ridingverse_settings")
 
@@ -26,15 +37,17 @@ private val Context.settingsDataStore by preferencesDataStore(name = "ridingvers
  */
 class AppSettings private constructor(private val appContext: Context) {
 
-    private val json = Json { ignoreUnknownKeys = true }
-
     // ------------------------------------------------------------------
     // Emergency contacts (feeds SosManager)
     // ------------------------------------------------------------------
     val emergencyContacts: Flow<List<EmergencyContact>> =
         appContext.settingsDataStore.data.map { prefs ->
             runCatching {
-                json.decodeFromString<List<EmergencyContact>>(prefs[KEY_CONTACTS] ?: "[]")
+                val raw = prefs[KEY_CONTACTS] ?: "[]"
+                val arr = JSONArray(raw)
+                List(arr.length()) { i ->
+                    EmergencyContact.fromJson(arr.getJSONObject(i))
+                }
             }.getOrDefault(emptyList())
         }
 
@@ -52,7 +65,9 @@ class AppSettings private constructor(private val appContext: Context) {
 
     private suspend fun saveContacts(contacts: List<EmergencyContact>) {
         appContext.settingsDataStore.edit { prefs ->
-            prefs[KEY_CONTACTS] = json.encodeToString(contacts)
+            val arr = JSONArray()
+            contacts.forEach { arr.put(it.toJson()) }
+            prefs[KEY_CONTACTS] = arr.toString()
         }
     }
 

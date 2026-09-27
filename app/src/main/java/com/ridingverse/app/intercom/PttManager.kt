@@ -18,9 +18,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import kotlinx.serialization.Serializable
-import kotlinx.serialization.encodeToString
-import kotlinx.serialization.json.Json
+import org.json.JSONObject
 import kotlin.math.sqrt
 
 /**
@@ -243,10 +241,9 @@ class PttManager(private val context: Context) {
 
 /**
  * One captured voice frame, ready to be wrapped in the network packet
- * documented on [PttManager]. Serialize with kotlinx.serialization and send
+ * documented on [PttManager]. Serialized with org.json and sent
  * as a text WebSocket frame with `"type": "ptt"`.
  */
-@Serializable
 data class PttVoiceFrame(
     val v: Int = 1,
     val type: String = "ptt",
@@ -256,10 +253,28 @@ data class PttVoiceFrame(
     val codec: String = "pcm16/16000/mono",
     val audioBase64: String
 ) {
-    fun toJson(): String = Json.encodeToString(this)
+    fun toJson(): String = JSONObject().apply {
+        put("v", v)
+        put("type", type)
+        put("room", room)
+        put("riderId", riderId)
+        put("seq", seq)
+        put("codec", codec)
+        put("audioBase64", audioBase64)
+    }.toString()
 
     companion object {
-        fun fromJson(raw: String): PttVoiceFrame? =
-            runCatching { Json.decodeFromString<PttVoiceFrame>(raw) }.getOrNull()
+        fun fromJson(raw: String): PttVoiceFrame? = runCatching {
+            val o = JSONObject(raw)
+            PttVoiceFrame(
+                v = o.optInt("v", 1),
+                type = o.optString("type", "ptt"),
+                room = o.getString("room"),
+                riderId = o.getString("riderId"),
+                seq = o.getInt("seq"),
+                codec = o.optString("codec", "pcm16/16000/mono"),
+                audioBase64 = o.getString("audioBase64")
+            )
+        }.getOrNull()
     }
 }
