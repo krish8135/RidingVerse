@@ -1,0 +1,25 @@
+# Gradle
+.gradle/
+build/
+
+# Android Studio / IntelliJ
+*.iml
+.idea/
+local.properties
+/captures
+.externalNativeBuild
+.cxx/
+
+# Signing keystores — never commit these
+*.jks
+*.keystore
+
+# OS noise
+.DS_Store
+Thumbs.db
+
+# Node (relay/)
+relay/node_modules/
+
+# Keep the Gradle wrapper jar committed so CI and fresh clones can build.
+!gradle/wrapper/gradle-wrapper.jar

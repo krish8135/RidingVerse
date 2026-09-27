@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<title>RidingVerse World Map</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<style>
+  html, body, #map { height: 100%; margin: 0; background: #0A0C0E; }
+  .panel {
+    position: absolute; top: 12px; left: 12px; z-index: 1000;
+    background: rgba(10,12,14,.94); color: #E8EDF2;
+    font-family: system-ui, sans-serif; font-size: 14px;
+    padding: 12px; border-radius: 14px; width: min(80vw, 320px);
+    border: 1px solid #2a323b; box-shadow: 0 6px 24px rgba(0,0,0,.5);
+  }
+  .panel input {
+    width: 100%; box-sizing: border-box; margin: 4px 0; padding: 10px;
+    border-radius: 8px; border: 1px solid #2a323b;
+    background: #1A2027; color: #E8EDF2; font-size: 15px;
+  }
+  .row { display: flex; gap: 8px; align-items: center; }
+  .row input { flex: 1; }
+  #swap {
+    flex: 0 0 auto; padding: 10px 12px; border-radius: 8px; border: 1px solid #2a323b;
+    background: #1A2027; color: #00E5FF; font-size: 16px; cursor: pointer;
+  }
+  .chips { display: flex; gap: 6px; margin: 8px 0; }
+  .chips button {
+    flex: 1; padding: 10px 4px; border-radius: 10px; font-size: 13px; cursor: pointer;
+    border: 1px solid #2a323b; background: #1A2027; color: #8A94A0;
+  }
+  .chips button.active { border-color: currentColor; color: #fff; background: #242c34; }
+  .chips button[data-profile="fastest"].active { color: #00E5FF; }
+  .chips button[data-profile="twisties"].active { color: #FFB300; }
+  .chips button[data-profile="scenic"].active { color: #00E676; }
+  .actions { display: flex; gap: 8px; }
+  .actions button {
+    flex: 1; padding: 12px; border: none; border-radius: 10px;
+    font-size: 15px; font-weight: 700; cursor: pointer;
+  }
+  #go { background: #1A2027; color: #00E5FF; border: 1px solid #00E5FF; }
+  #startRide { background: #00E676; color: #0A0C0E; }
+  #meta { margin-top: 8px; font-size: 12px; color: #8A94A0; min-height: 16px; }
+  .rider-pin {
+    background: #00E676; color: #0A0C0E; border-radius: 50%;
+    width: 30px; height: 30px; display: flex; align-items: center; justify-content: center;
+    font-size: 16px; border: 2px solid #fff; box-shadow: 0 2px 8px rgba(0,0,0,.6);
+  }
+  .rider-label {
+    background: rgba(10,12,14,.85); color: #fff; font-size: 11px;
+    padding: 2px 6px; border-radius: 6px; white-space: nowrap; margin-top: 2px;
+  }
+</style>
+</head>
+<body>
+<div id="map"></div>
+<div class="panel">
+  <div class="row">
+    <input id="from" placeholder="From (blank = my GPS)" />
+    <button id="swap" title="Swap">&#8646;</button>
+  </div>
+  <input id="to" placeholder="To — city, pass, landmark…" />
+  <div class="chips">
+    <button data-profile="fastest" class="active">&#9889; Fastest</button>
+    <button data-profile="twisties">&#127950; Twisties</button>
+    <button data-profile="scenic">&#127754; Scenic</button>
+  </div>
+  <div class="actions">
+    <button id="go">Find routes</button>
+    <button id="startRide">Start Ride</button>
+  </div>
+  <div id="meta"></div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+(function () {
+  'use strict';
+
+  var map = L.map('map', { zoomControl: false }).setView([12.9716, 77.5946], 11);
+  L.control.zoom({ position: 'bottomright' }).addTo(map);
+
+  var osm = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+    { maxZoom: 19, attribution: '&copy; OpenStreetMap contributors' }).addTo(map);
+  var satellite = L.tileLayer(
+    'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+    { maxZoom: 19, attribution: 'Imagery &copy; Esri' });
+  var dark = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
+    { maxZoom: 19, attribution: '&copy; OpenStreetMap &copy; CARTO' });
+  L.control.layers(
+    { 'Street': osm, 'Satellite': satellite, 'Dark': dark }, null,
+    { position: 'bottomright' }).addTo(map);
+
+  var PROFILE_COLORS = { fastest: '#00E5FF', twisties: '#FFB300', scenic: '#00E676' };
+  var activeProfile = 'fastest';
+  var routes = {};            // profile -> { coords:[[lat,lng]], distance, duration, line }
+  var originMarker = null, destMarker = null;
+  var riderMarkers = {};      // riderId -> L.marker
+
+  function setMeta(t) { document.getElementById('meta').textContent = t || ''; }
+
+  function geocode(query) {
+    return fetch('https://nominatim.openstreetmap.org/search?format=json&limit=1&q=' +
+      encodeURIComponent(query))
+      .then(function (r) { return r.json(); })
+      .then(function (arr) {
+        if (!arr.length) throw new Error('Not found: ' + query);
+        return { lat: parseFloat(arr[0].lat), lng: parseFloat(arr[0].lon), name: arr[0].display_name };
+      });
+  }
+
+  function myPosition() {
+    return new Promise(function (resolve, reject) {
+      if (!navigator.geolocation) return reject(new Error('No geolocation'));
+      navigator.geolocation.getCurrentPosition(
+        function (p) { resolve({ lat: p.coords.latitude, lng: p.coords.longitude, name: 'My GPS' }); },
+        function (e) { reject(e); }, { timeout: 8000 });
+    });
+  }
+
+  // Perpendicular offset waypoint so twisties/scenic differ from the fastest line.
+  function offsetWaypoint(a, b, fraction, side) {
+    var mx = (a.lat + b.lat) / 2, my = (a.lng + b.lng) / 2;
+    var dx = b.lat - a.lat, dy = b.lng - a.lng;
+    var len = Math.sqrt(dx * dx + dy * dy) || 1;
+    return {
+      lat: mx + (-dy / len) * len * fraction * side,
+      lng: my + (dx / len) * len * fraction * side
+    };
+  }
+
+  function osrmRoute(points) {
+    var coords = points.map(function (p) { return p.lng + ',' + p.lat; }).join(';');
+    return fetch('https://router.project-osrm.org/route/v1/driving/' + coords +
+      '?overview=full&geometries=geojson&steps=true')
+      .then(function (r) { return r.json(); })
+      .then(function (j) {
+        if (j.code !== 'Ok' || !j.routes.length) throw new Error('No route found');
+        var r0 = j.routes[0];
+        return {
+          coords: r0.geometry.coordinates.map(function (c) { return [c[1], c[0]]; }),
+          distance: r0.distance,
+          duration: r0.duration,
+          steps: (r0.legs && r0.legs[0] && r0.legs[0].steps) || []
+        };
+      });
+  }
+
+  function drawRoute(profile, data) {
+    if (routes[profile] && routes[profile].line) map.removeLayer(routes[profile].line);
+    var line = L.polyline(data.coords, {
+      color: PROFILE_COLORS[profile], weight: profile === activeProfile ? 6 : 3,
+      opacity: profile === activeProfile ? 1 : 0.45
+    }).addTo(map);
+    routes[profile] = {
+      coords: data.coords, distance: data.distance, duration: data.duration,
+      line: line, steps: data.steps || []
+    };
+  }
+
+  function selectProfile(profile) {
+    activeProfile = profile;
+    document.querySelectorAll('.chips button').forEach(function (b) {
+      b.classList.toggle('active', b.dataset.profile === profile);
+    });
+    Object.keys(routes).forEach(function (p) {
+      if (routes[p].line) {
+        routes[p].line.setStyle({
+          color: PROFILE_COLORS[p], weight: p === profile ? 6 : 3,
+          opacity: p === profile ? 1 : 0.45
+        });
+      }
+    });
+    var r = routes[profile];
+    if (r) {
+      setMeta((r.distance / 1000).toFixed(1) + ' km · ' + Math.round(r.duration / 60) + ' min · ' + profile);
+      map.fitBounds(L.latLngBounds(r.coords), { padding: [40, 40] });
+    }
+  }
+
+  document.querySelectorAll('.chips button').forEach(function (b) {
+    b.addEventListener('click', function () { selectProfile(b.dataset.profile); });
+  });
+
+  document.getElementById('swap').addEventListener('click', function () {
+    var f = document.getElementById('from'), t = document.getElementById('to');
+    var tmp = f.value; f.value = t.value; t.value = tmp;
+  });
+
+  document.getElementById('go').addEventListener('click', function () {
+    var fromQ = document.getElementById('from').value.trim();
+    var toQ = document.getElementById('to').value.trim();
+    if (!toQ) { setMeta('Enter a destination first.'); return; }
+    setMeta('Finding routes…');
+    Promise.all([(fromQ ? geocode(fromQ) : myPosition()), geocode(toQ)])
+      .then(function (pts) {
+        var from = pts[0], to = pts[1];
+
+        if (originMarker) map.removeLayer(originMarker);
+        if (destMarker) map.removeLayer(destMarker);
+        originMarker = L.marker([from.lat, from.lng], { title: from.name }).addTo(map);
+        destMarker = L.marker([to.lat, to.lng], { title: to.name }).addTo(map);
+        routes.from = from; routes.to = to;
+
+        return Promise.all([
+          osrmRoute([from, to]).then(function (d) { drawRoute('fastest', d); }),
+          osrmRoute([from, offsetWaypoint(from, to, 0.10, 1), to])
+            .then(function (d) { drawRoute('twisties', d); }),
+          osrmRoute([from, offsetWaypoint(from, to, 0.06, -1), to])
+            .then(function (d) { drawRoute('scenic', d); })
+        ]);
+      })
+      .then(function () { selectProfile(activeProfile); })
+      .catch(function (e) { setMeta('Route error: ' + e.message); });
+  });
+
+  document.getElementById('startRide').addEventListener('click', function () {
+    var r = routes[activeProfile];
+    if (!r || !routes.from || !routes.to) { setMeta('Find a route first.'); return; }
+    var payload = {
+      from: { lat: routes.from.lat, lng: routes.from.lng },
+      to: { lat: routes.to.lat, lng: routes.to.lng },
+      toName: String(routes.to.name || 'Destination').split(',')[0],
+      profile: activeProfile.toUpperCase(),
+      polyline: r.coords,
+      distanceMeters: r.distance,
+      durationSeconds: r.duration,
+      steps: r.steps || []
+    };
+    if (window.Android && window.Android.onRouteSelected) {
+      window.Android.onRouteSelected(JSON.stringify(payload));
+    }
+  });
+
+  // ---- Kotlin-driven mini-map API (used by the cockpit HUD) ----
+  var routeLine = null, meMarker = null;
+
+  /** Shows/hides the From/To search panel; the cockpit mini-map hides it. */
+  window.setPanelVisible = function (v) {
+    var p = document.querySelector('.panel');
+    if (p) p.style.display = v ? 'block' : 'none';
+  };
+
+  /** Draws the active route from a JSON string of [[lat,lng], ...]. */
+  window.showRoute = function (json) {
+    var coords;
+    try { coords = JSON.parse(json); } catch (e) { return; }
+    if (!coords || !coords.length) return;
+    if (routeLine) map.removeLayer(routeLine);
+    routeLine = L.polyline(coords, { color: '#00E676', weight: 6 }).addTo(map);
+    map.fitBounds(L.latLngBounds(coords), { padding: [30, 30] });
+  };
+
+  window.clearRoute = function () {
+    if (routeLine) { map.removeLayer(routeLine); routeLine = null; }
+  };
+
+  /** Pans to a position and moves the "me" marker there. */
+  window.centerOn = function (lat, lng, zoom) {
+    var ll = [lat, lng];
+    if (meMarker) {
+      meMarker.setLatLng(ll);
+    } else {
+      meMarker = L.circleMarker(ll, {
+        radius: 9, color: '#ffffff', weight: 2,
+        fillColor: '#00E5FF', fillOpacity: 1
+      }).addTo(map);
+    }
+    map.setView(ll, zoom || map.getZoom(), { animate: true });
+  };
+
+  /** Called from Kotlin with a JSON string: [{riderId,name,lat,lng,bearing}]. */
+  window.updateRiders = function (json) {
+    var riders;
+    try { riders = JSON.parse(json); } catch (e) { return; }
+    var seen = {};
+    riders.forEach(function (rd) {
+      seen[rd.riderId] = true;
+      var icon = L.divIcon({
+        className: '',
+        html: '<div style="text-align:center">' +
+          '<div class="rider-pin">&#127950;</div>' +
+          '<div class="rider-label">' + (rd.name || rd.riderId) + '</div></div>',
+        iconSize: [40, 52], iconAnchor: [20, 26]
+      });
+      if (riderMarkers[rd.riderId]) {
+        riderMarkers[rd.riderId].setLatLng([rd.lat, rd.lng]).setIcon(icon);
+      } else {
+        riderMarkers[rd.riderId] = L.marker([rd.lat, rd.lng], { icon: icon }).addTo(map);
+      }
+    });
+    Object.keys(riderMarkers).forEach(function (id) {
+      if (!seen[id]) { map.removeLayer(riderMarkers[id]); delete riderMarkers[id]; }
+    });
+  };
+
+  window.addEventListener('load', function () {
+    if (window.Android && window.Android.onMapReady) window.Android.onMapReady();
+  });
+})();
+</script>
+</body>
+</html>
